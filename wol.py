@@ -2,14 +2,62 @@ import json
 import os
 import subprocess
 import sys
+import logging
+import argparse
+from datetime import datetime
 from flask import Flask, request, jsonify, render_template_string
 import threading
 import webbrowser
+
+# Configure argument parser
+def parse_arguments():
+    parser = argparse.ArgumentParser(description='Wake-on-LAN Web Server')
+    parser.add_argument('-p', '--port', type=int, default=5000,
+                        help='Port to run the server on (default: 5000)')
+    parser.add_argument('-i', '--ip', type=str, default='0.0.0.0',
+                        help='IP address to bind the server to (default: 0.0.0.0)')
+    parser.add_argument('-d', '--directory', type=str, default=None,
+                        help='Directory to look for devices.json and store logs (default: current directory)')
+    parser.add_argument('-l', '--logging', action='store_true',
+                        help='Enable detailed logging')
+    parser.add_argument('--no-browser', action='store_true',
+                        help='Do not automatically open browser')
+    return parser.parse_args()
+
+# Set up logger
+def setup_logging(log_directory, enabled):
+    if not enabled:
+        return
+    
+    if not os.path.exists(log_directory):
+        os.makedirs(log_directory)
+    
+    log_file = os.path.join(log_directory, f'wol_server_{datetime.now().strftime("%Y%m%d")}.log')
+    
+    logging.basicConfig(
+        filename=log_file,
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+    
+    # Also log to console
+    console = logging.StreamHandler()
+    console.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    console.setFormatter(formatter)
+    logging.getLogger('').addHandler(console)
+    
+    logging.info("Logging initialized")
 
 app = Flask(__name__)
 
 # pip install flask wakeonlan pyinstaller
 # pyinstaller --onefile wol_server.py
+
+# Global variables
+log_enabled = False
+working_directory = os.getcwd()
 
 # Replace the PHP executeCommand function with a Python implementation
 def execute_command(cmd):
@@ -216,19 +264,33 @@ HTML_TEMPLATE = '''
 
 @app.route('/')
 def index():
+    if log_enabled:
+        client_ip = request.remote_addr
+        user_agent = request.headers.get('User-Agent')
+        logging.info(f"Page visit - IP: {client_ip}, User-Agent: {user_agent}")
+    
     return render_template_string(HTML_TEMPLATE)
 
 @app.route('/devices.json')
 def devices_json():
-    # Read devices.json from the current working directory
+    # Read devices.json from the configured directory
+    json_path = os.path.join(working_directory, 'devices.json')
     try:
-        with open('devices.json', 'r') as f:
+        with open(json_path, 'r') as f:
             devices = json.load(f)
+        
+        if log_enabled:
+            logging.info(f"Loaded {len(devices)} devices from {json_path}")
+        
         return jsonify(devices)
     except FileNotFoundError:
+        if log_enabled:
+            logging.warning(f"devices.json not found at {json_path}")
         # Return an empty array if file doesn't exist
         return jsonify([])
     except json.JSONDecodeError:
+        if log_enabled:
+            logging.error(f"Invalid JSON in devices.json at {json_path}")
         # Return an empty array if JSON is invalid
         return jsonify([])
 
@@ -237,6 +299,11 @@ def wake_on_lan():
     data = request.json
     if 'mac' in data:
         mac = data['mac']
+        client_ip = request.remote_addr
+        user_agent = request.headers.get('User-Agent')
+        
+        if log_enabled:
+            logging.info(f"WOL request - MAC: {mac}, IP: {client_ip}, User-Agent: {user_agent}")
         
         # Determine the platform-specific WOL command
         if sys.platform.startswith('win'):
@@ -244,33 +311,64 @@ def wake_on_lan():
             from wakeonlan import send_magic_packet
             try:
                 send_magic_packet(mac)
-                return f"Wake on LAN signal sent to MAC: {mac}"
+                
+                response = f"Wake on LAN signal sent to MAC: {mac}"
+                if log_enabled:
+                    logging.info(f"WOL sent - MAC: {mac}")
+                return response
             except Exception as e:
-                return f"Error sending WOL packet: {str(e)}"
+                error_msg = f"Error sending WOL packet: {str(e)}"
+                if log_enabled:
+                    logging.error(error_msg)
+                return error_msg
         else:
             # For Linux/Mac, use etherwake or similar command
-            # Adjust the command based on your system's tools
-            # This assumes etherwake is installed on Linux systems
             if sys.platform.startswith('linux'):
                 cmd = f"sudo etherwake -i br-lan {mac}"
             else:  # macOS
                 cmd = f"wakeonlan {mac}"
                 
             output = execute_command(cmd)
-            return f"{output} - Wake on LAN signal sent to MAC: {mac}"
+            response = f"{output} - Wake on LAN signal sent to MAC: {mac}"
+            if log_enabled:
+                logging.info(f"WOL command executed - MAC: {mac}, Command: {cmd}, Output: {output}")
+            return response
     else:
+        if log_enabled:
+            logging.warning(f"WOL request without MAC address - IP: {client_ip}")
         return "MAC address not provided."
 
-def open_browser(port):
+def open_browser(host, port):
     """Open the browser after a short delay"""
-    webbrowser.open(f'http://localhost:{port}/')
+    # Use localhost instead of the binding IP if it's 0.0.0.0
+    browser_host = 'localhost' if host == '0.0.0.0' else host
+    webbrowser.open(f'http://{browser_host}:{port}/')
 
 def main():
-    print("Starting Wake on LAN Server...")
-    print("Reading devices from devices.json in the current directory")
+    # Parse command line arguments
+    args = parse_arguments()
+    
+    global log_enabled, working_directory
+    
+    # Set working directory
+    if args.directory:
+        working_directory = os.path.abspath(args.directory)
+    else:
+        working_directory = os.getcwd()
+    
+    # Set up logging
+    log_enabled = args.logging
+    if log_enabled:
+        setup_logging(working_directory, log_enabled)
+    
+    # Print startup information
+    print(f"Starting Wake on LAN Server on {args.ip}:{args.port}")
+    print(f"Using directory: {working_directory}")
+    print(f"Detailed logging: {'Enabled' if log_enabled else 'Disabled'}")
     
     # Check for a devices.json file and create a sample one if it doesn't exist
-    if not os.path.exists('devices.json'):
+    json_path = os.path.join(working_directory, 'devices.json')
+    if not os.path.exists(json_path):
         print("devices.json not found. Creating a sample file...")
         sample_devices = [
             {
@@ -279,18 +377,16 @@ def main():
                 "description": "Sample device - edit devices.json to customize"
             }
         ]
-        with open('devices.json', 'w') as f:
+        with open(json_path, 'w') as f:
             json.dump(sample_devices, f, indent=4)
-        print("Sample devices.json created. Please edit it with your actual devices.")
+        print(f"Sample devices.json created at {json_path}")
     
-    # Choose a port (default: 5000)
-    port = 5000
-    
-    # Open browser automatically after server starts
-    threading.Timer(1.5, open_browser, args=[port]).start()
+    # Open browser automatically after server starts (unless disabled)
+    if not args.no_browser:
+        threading.Timer(1.5, open_browser, args=[args.ip if args.ip != '0.0.0.0' else 'localhost', args.port]).start()
     
     # Run the Flask app
-    app.run(host='0.0.0.0', port=port)
+    app.run(host=args.ip, port=args.port)
 
 if __name__ == '__main__':
     main()
