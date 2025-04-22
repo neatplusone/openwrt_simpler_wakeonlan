@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  wol-server:
+    image: ghcr.io/neatplusone/openwrt_simpler_wakeonlan:latest
+    container_name: wol-server
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      # Mount local devices.json and logs directory
+      - ./data:/app/data
+    environment:
+      # Set any environment variables if needed
+      - TZ=UTC
+    networks:
+      - host_network
+    # Add these parameters for network discovery and broadcasting
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: ["-ip", "0.0.0.0", "-port", "5000", "-directory", "/app/data", "-l"]
+
+networks:
+  host_network:
+    # Using host network mode for better network compatibility
+    # This helps with broadcasting WoL packets on the local network
+    driver: bridge

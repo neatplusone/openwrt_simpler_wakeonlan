@@ -1,0 +1,14 @@
+[
+    {
+        "mac_address":"BC:24:11:00:00:00",
+        "name":"GAMESERVER",
+        "description":"L1-R8 | i5-5200U Nvidia 920M",
+        "status_ip":"10.0.8.1"
+    },
+    {
+       "mac_address":"BC:24:11:00:00:00",
+       "name":"HOMEPC",
+       "ssh_username":"",
+       "status_ip":""
+    }
+]

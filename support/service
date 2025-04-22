@@ -1,0 +1,13 @@
+[Unit]
+Description=ntywakeonlan service for mytestfolder
+Wants=network-online.target
+After=network-online.target
+
+# note: absolute paths are necessary here
+[Service]
+ExecStart=/usr/bin/ntywakeonlan -d /home/devusr/mytestfolder
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target
