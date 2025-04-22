@@ -9,6 +9,8 @@ from flask import Flask, request, jsonify, render_template_string
 import threading
 import webbrowser
 
+#pip install flask wakeonlan
+
 # Configure argument parser
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Wake-on-LAN Web Server')
