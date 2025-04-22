@@ -54,7 +54,7 @@ A simple Go-based web server for sending Wake-on-LAN (WoL) magic packets to devi
 
 | Flag | Shorthand | Description | Default |
 |------|-----------|-------------|---------|
-| `--port` | `-p` | Port to run the server on | 5000 |
+| `--port` | `-p` | Port to run the server on | 8000 |
 | `--ip` | | IP address to bind the server to | 0.0.0.0 |
 | `--directory` | `-d` | Directory for devices.json and logs | Current directory |
 | `--logging` | `-l` | Enable logging to file | false |
@@ -111,6 +111,11 @@ Build for MacOS:
 make build-mac
 ```
 
+Or for all platforms and ARM:
+```
+make build-all
+```
+
 ## Docker Deployment
 
 The included Docker setup provides a containerized deployment option.
@@ -127,7 +132,7 @@ The included Docker setup provides a containerized deployment option.
    docker-compose up -d
    ```
 
-4. Access the web interface at http://localhost:5000
+4. Access the web interface at http://localhost:8000
 
 ## License
 

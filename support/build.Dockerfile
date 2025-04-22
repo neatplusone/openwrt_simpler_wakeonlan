@@ -25,13 +25,12 @@ LABEL org.opencontainers.image.licenses="MIT"
 
 # Install necessary utilities for WOL
 RUN apk --no-cache add \
-    # Required for wakeonlan on Linux
-    wakeonlan \
-    # Good to have for debugging
-    curl \
-    # For network utilities
+    # For network utilities (contains ether-wake)
     net-tools \
-    iputils
+    # For network troubleshooting
+    iputils \
+    # For debugging
+    curl
 
 # Set the working directory
 WORKDIR /app
@@ -48,5 +47,5 @@ RUN echo '[{"name":"Example Device","mac_address":"00:11:22:33:44:55","descripti
 # Expose the default port
 EXPOSE 5000
 
-# Set the entry point
+# Set the entry point with fallback to Go implementation if command-line tools aren't available
 ENTRYPOINT ["/app/wol-server", "-directory", "/app/data"]
