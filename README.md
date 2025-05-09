@@ -13,6 +13,71 @@ A simple Go-based web server for sending Wake-on-LAN (WoL) magic packets to devi
 
 ## Installation
 
+## For OpenWRT
+```sh
+curl -JLO [url to release for your cpu architecture]
+chmod +x wol-server_linux_[CPU]
+./wol-server_linux_arm64 # check if it runs
+```
+
+```
+location = /wol {
+    # Redirect /wol to /wol/ with trailing slash
+    return 301 $scheme://$host/wol/;
+}
+
+location /wol/ {
+    # Strip the /wol/ prefix before proxying
+    rewrite ^/wol/(.*)$ /$1 break;
+    
+    # Proxy requests to your new server
+    proxy_pass http://0.0.0.0:8000;
+    
+    # Standard proxy headers
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    
+    # Websocket support (if needed)
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    
+    # Timeout settings
+    proxy_connect_timeout 60s;
+    proxy_send_timeout 60s;
+    proxy_read_timeout 60s;
+}
+```
+
+```sh
+nginx -t
+sudo /etc/init.d/nginx restart
+
+EDITOR=nano crontab -e
+@reboot sleep 30 && /wakelanwww/wol-server_linux_arm64 -l >> /tmp/wol-server.log 2>&1 &
+
+service cron restart
+reboot
+```
+
+As a fallback you can still consider having php version around (see php branch for detailed guide):  
+```
+    location /wolphp {
+        # Internally rewrite /wol to /wol.php
+        rewrite ^/wolphp$ /wol.php last;
+
+        # Process the PHP script using PHP-FPM
+        include fastcgi_params;
+        fastcgi_split_path_info ^(.+\.php)(/.+)$;
+        fastcgi_pass unix:/var/run/php7-fpm.sock;  # Update the PHP version/socket as needed
+        fastcgi_index /wakelanwww/wol.php;
+        fastcgi_param SCRIPT_FILENAME /wakelanwww/wol.php;
+        fastcgi_param PATH_INFO $fastcgi_path_info;
+    }
+```
+
 ### Prerequisites
 
 - Go 1.16+ installed (for building from source)
