@@ -44,12 +44,27 @@ jobs:
         go-version: '1.21'
     - name: Install required tools
       run: |
-        if ! command -v sha256sum &> /dev/null; then
-          echo "sha256sum not found, installing coreutils..."
-          sudo apt-get update
-          sudo apt-get install -y coreutils
-        else
-          echo "sha256sum already installed"
+        echo "Installing/verifying required tools..."
+
+        # For Linux (Ubuntu runner)
+        if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+          if ! command -v sha256sum &> /dev/null; then
+            echo "sha256sum not found, installing coreutils on Linux..."
+            sudo apt-get update
+            sudo apt-get install -y coreutils
+          else
+            echo "sha256sum already installed"
+          fi
+        fi
+
+        # For macOS
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+          if ! command -v shasum &> /dev/null; then
+            echo "shasum not found, installing coreutils on macOS..."
+            brew install coreutils
+          else
+            echo "shasum already installed"
+          fi
         fi
     - name: Build all artifacts
       run: make build-all

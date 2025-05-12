@@ -8,9 +8,7 @@ BINARY_NAME=wol-server
 BINARY_UNIX=$(BINARY_NAME)_unix
 BUILD_DIR=builds
 
-# Check if sha256sum exists, otherwise use shasum -a 256
-# First try sha256sum (Linux/Windows with coreutils), then try shasum (macOS), and provide a fallback if neither exists
-SHASUM_CMD := $(shell which sha256sum 2>/dev/null || which shasum 2>/dev/null && echo "shasum -a 256" || echo "echo 'Checksum tool not available - ' ")
+# Makefile for building the Wake-on-LAN server for multiple platforms
 
 # Build targets
 .PHONY: all test clean run build-all init help
@@ -69,24 +67,36 @@ create-buildout:
 	echo "Wake-on-LAN Web Server - Binary Releases" > $(BUILD_DIR)/buildout
 	echo "" >> $(BUILD_DIR)/buildout
 	echo "## Binaries" >> $(BUILD_DIR)/buildout
-	echo "- Windows (x64): $(BINARY_NAME)_windows_amd64.exe" >> $(BUILD_DIR)/buildout
-	echo "  SHA256: $$( ($(SHASUM_CMD) $(BUILD_DIR)/$(BINARY_NAME)_windows_amd64.exe || echo 'checksum not available') | cut -d ' ' -f 1)" >> $(BUILD_DIR)/buildout
-	echo "- Windows (x86): $(BINARY_NAME)_windows_386.exe" >> $(BUILD_DIR)/buildout
-	echo "  SHA256: $$( ($(SHASUM_CMD) $(BUILD_DIR)/$(BINARY_NAME)_windows_386.exe || echo 'checksum not available') | cut -d ' ' -f 1)" >> $(BUILD_DIR)/buildout
-	echo "- Linux (x64): $(BINARY_NAME)_linux_amd64" >> $(BUILD_DIR)/buildout
-	echo "  SHA256: $$( ($(SHASUM_CMD) $(BUILD_DIR)/$(BINARY_NAME)_linux_amd64 || echo 'checksum not available') | cut -d ' ' -f 1)" >> $(BUILD_DIR)/buildout
-	echo "- Linux (x86): $(BINARY_NAME)_linux_386" >> $(BUILD_DIR)/buildout
-	echo "  SHA256: $$( ($(SHASUM_CMD) $(BUILD_DIR)/$(BINARY_NAME)_linux_386 || echo 'checksum not available') | cut -d ' ' -f 1)" >> $(BUILD_DIR)/buildout
-	echo "- Linux (ARM64): $(BINARY_NAME)_linux_arm64" >> $(BUILD_DIR)/buildout
-	echo "  SHA256: $$( ($(SHASUM_CMD) $(BUILD_DIR)/$(BINARY_NAME)_linux_arm64 || echo 'checksum not available') | cut -d ' ' -f 1)" >> $(BUILD_DIR)/buildout
-	echo "- Linux (ARMv7): $(BINARY_NAME)_linux_armv7" >> $(BUILD_DIR)/buildout
-	echo "  SHA256: $$( ($(SHASUM_CMD) $(BUILD_DIR)/$(BINARY_NAME)_linux_armv7 || echo 'checksum not available') | cut -d ' ' -f 1)" >> $(BUILD_DIR)/buildout
-	echo "- Linux (ARMv6): $(BINARY_NAME)_linux_armv6" >> $(BUILD_DIR)/buildout
-	echo "  SHA256: $$( ($(SHASUM_CMD) $(BUILD_DIR)/$(BINARY_NAME)_linux_armv6 || echo 'checksum not available') | cut -d ' ' -f 1)" >> $(BUILD_DIR)/buildout
-	echo "- macOS (x64): $(BINARY_NAME)_darwin_amd64" >> $(BUILD_DIR)/buildout
-	echo "  SHA256: $$( ($(SHASUM_CMD) $(BUILD_DIR)/$(BINARY_NAME)_darwin_amd64 || echo 'checksum not available') | cut -d ' ' -f 1)" >> $(BUILD_DIR)/buildout
-	echo "- macOS (ARM/M1): $(BINARY_NAME)_darwin_arm64" >> $(BUILD_DIR)/buildout
-	echo "  SHA256: $$( ($(SHASUM_CMD) $(BUILD_DIR)/$(BINARY_NAME)_darwin_arm64 || echo 'checksum not available') | cut -d ' ' -f 1)" >> $(BUILD_DIR)/buildout
+
+	@echo "Computing checksums..."
+
+	@echo "- Windows (x64): $(BINARY_NAME)_windows_amd64.exe" >> $(BUILD_DIR)/buildout
+	@echo "  SHA256: `cd $(BUILD_DIR) && sha256sum $(BINARY_NAME)_windows_amd64.exe 2>/dev/null | cut -d ' ' -f1 || shasum -a 256 $(BINARY_NAME)_windows_amd64.exe 2>/dev/null | cut -d ' ' -f1 || echo "checksum not available"`" >> $(BUILD_DIR)/buildout
+
+	@echo "- Windows (x86): $(BINARY_NAME)_windows_386.exe" >> $(BUILD_DIR)/buildout
+	@echo "  SHA256: `cd $(BUILD_DIR) && sha256sum $(BINARY_NAME)_windows_386.exe 2>/dev/null | cut -d ' ' -f1 || shasum -a 256 $(BINARY_NAME)_windows_386.exe 2>/dev/null | cut -d ' ' -f1 || echo "checksum not available"`" >> $(BUILD_DIR)/buildout
+
+	@echo "- Linux (x64): $(BINARY_NAME)_linux_amd64" >> $(BUILD_DIR)/buildout
+	@echo "  SHA256: `cd $(BUILD_DIR) && sha256sum $(BINARY_NAME)_linux_amd64 2>/dev/null | cut -d ' ' -f1 || shasum -a 256 $(BINARY_NAME)_linux_amd64 2>/dev/null | cut -d ' ' -f1 || echo "checksum not available"`" >> $(BUILD_DIR)/buildout
+
+	@echo "- Linux (x86): $(BINARY_NAME)_linux_386" >> $(BUILD_DIR)/buildout
+	@echo "  SHA256: `cd $(BUILD_DIR) && sha256sum $(BINARY_NAME)_linux_386 2>/dev/null | cut -d ' ' -f1 || shasum -a 256 $(BINARY_NAME)_linux_386 2>/dev/null | cut -d ' ' -f1 || echo "checksum not available"`" >> $(BUILD_DIR)/buildout
+
+	@echo "- Linux (ARM64): $(BINARY_NAME)_linux_arm64" >> $(BUILD_DIR)/buildout
+	@echo "  SHA256: `cd $(BUILD_DIR) && sha256sum $(BINARY_NAME)_linux_arm64 2>/dev/null | cut -d ' ' -f1 || shasum -a 256 $(BINARY_NAME)_linux_arm64 2>/dev/null | cut -d ' ' -f1 || echo "checksum not available"`" >> $(BUILD_DIR)/buildout
+
+	@echo "- Linux (ARMv7): $(BINARY_NAME)_linux_armv7" >> $(BUILD_DIR)/buildout
+	@echo "  SHA256: `cd $(BUILD_DIR) && sha256sum $(BINARY_NAME)_linux_armv7 2>/dev/null | cut -d ' ' -f1 || shasum -a 256 $(BINARY_NAME)_linux_armv7 2>/dev/null | cut -d ' ' -f1 || echo "checksum not available"`" >> $(BUILD_DIR)/buildout
+
+	@echo "- Linux (ARMv6): $(BINARY_NAME)_linux_armv6" >> $(BUILD_DIR)/buildout
+	@echo "  SHA256: `cd $(BUILD_DIR) && sha256sum $(BINARY_NAME)_linux_armv6 2>/dev/null | cut -d ' ' -f1 || shasum -a 256 $(BINARY_NAME)_linux_armv6 2>/dev/null | cut -d ' ' -f1 || echo "checksum not available"`" >> $(BUILD_DIR)/buildout
+
+	@echo "- macOS (x64): $(BINARY_NAME)_darwin_amd64" >> $(BUILD_DIR)/buildout
+	@echo "  SHA256: `cd $(BUILD_DIR) && sha256sum $(BINARY_NAME)_darwin_amd64 2>/dev/null | cut -d ' ' -f1 || shasum -a 256 $(BINARY_NAME)_darwin_amd64 2>/dev/null | cut -d ' ' -f1 || echo "checksum not available"`" >> $(BUILD_DIR)/buildout
+
+	@echo "- macOS (ARM/M1): $(BINARY_NAME)_darwin_arm64" >> $(BUILD_DIR)/buildout
+	@echo "  SHA256: `cd $(BUILD_DIR) && sha256sum $(BINARY_NAME)_darwin_arm64 2>/dev/null | cut -d ' ' -f1 || shasum -a 256 $(BINARY_NAME)_darwin_arm64 2>/dev/null | cut -d ' ' -f1 || echo "checksum not available"`" >> $(BUILD_DIR)/buildout
+
 	echo "" >> $(BUILD_DIR)/buildout
 	echo "## Docker Images" >> $(BUILD_DIR)/buildout
 	echo "Docker images are available at ghcr.io/neatplusone/openwrt_simpler_wakeonlan" >> $(BUILD_DIR)/buildout
