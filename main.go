@@ -286,18 +286,31 @@ func executeCommand(cmd string) (string, error) {
 }
 
 // Handler for the main page
-func indexHandler(w http.ResponseWriter, r *http.Request) {
-	log.Printf("Page visit - IP: %s, User-Agent: %s", r.RemoteAddr, r.Header.Get("User-Agent"))
-	
-	tmpl, err := template.New("index").Parse(htmlTemplate)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error parsing template: %v", err), http.StatusInternalServerError)
-		return
-	}
+func indexHandler(config Config) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("Page visit - IP: %s, User-Agent: %s", r.RemoteAddr, r.Header.Get("User-Agent"))
 
-	err = tmpl.Execute(w, nil)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error executing template: %v", err), http.StatusInternalServerError)
+		// Check if wol_index.html exists in the current directory
+		htmlFilePath := filepath.Join(config.Directory, "wol_index.html")
+		if _, err := os.Stat(htmlFilePath); err == nil {
+			// File exists, serve it
+			log.Printf("Serving external HTML file: %s", htmlFilePath)
+			http.ServeFile(w, r, htmlFilePath)
+			return
+		}
+
+		// External file doesn't exist, use the embedded template
+		log.Printf("External HTML file not found, using embedded template")
+		tmpl, err := template.New("index").Parse(htmlTemplate)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Error parsing template: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		err = tmpl.Execute(w, nil)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Error executing template: %v", err), http.StatusInternalServerError)
+		}
 	}
 }
 
@@ -450,12 +463,12 @@ func main() {
 	if flag.CommandLine.Lookup("port").Value.String() == "8000" && *shortPort != 8000 {
 		finalPort = *shortPort
 	}
-	
+
 	finalDirectory := *directory
 	if *directory == "" && *shortDirectory != "" {
 		finalDirectory = *shortDirectory
 	}
-	
+
 	finalLogToFile := *logToFile
 	if !*logToFile && *shortLogToFile {
 		finalLogToFile = *shortLogToFile
@@ -468,7 +481,7 @@ func main() {
 		LogToFile:   finalLogToFile,
 		OpenBrowser: *openBrowser,
 	}
-	
+
 	// Set working directory
 	if finalDirectory != "" {
 		config.Directory = finalDirectory
@@ -493,7 +506,7 @@ func main() {
 
 	// Setup logging - always enabled for console
 	log.SetFlags(log.Ldate | log.Ltime)
-	
+
 	// If LogToFile is enabled, set up file logging
 	if config.LogToFile {
 		logDir := config.Directory
@@ -531,7 +544,7 @@ func main() {
 	createSampleDevicesJSON(jsonPath)
 
 	// Set up HTTP handlers
-	http.HandleFunc("/", indexHandler)
+	http.HandleFunc("/", indexHandler(config))
 	http.HandleFunc("/devices.json", devicesJSONHandler(config))
 	http.HandleFunc("/wake", wakeHandler(config))
 
@@ -542,7 +555,7 @@ func main() {
 			browserHost = config.IP
 		}
 		url := fmt.Sprintf("http://%s:%d/", browserHost, config.Port)
-		
+
 		go func() {
 			time.Sleep(1500 * time.Millisecond)
 			log.Printf("Opening browser at %s", url)
