@@ -21,6 +21,7 @@ chmod +x wol-server_linux_[CPU]
 ```
 
 ```
+# /etc/nginx/conf.d/gl.conf
 location = /wol {
     # Redirect /wol to /wol/ with trailing slash
     return 301 $scheme://$host/wol/;
