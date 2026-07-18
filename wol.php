@@ -67,11 +67,12 @@ function executeCommand($cmd) {
     font-family: Arial, sans-serif;
     margin: 0;
     padding: 20px;
+    box-sizing: border-box;
     display: flex;
     justify-content: center;
     align-items: center;
     flex-direction: column;
-    height: 100vh;
+    min-height: 100vh;
 }
 
 .device-grid {
